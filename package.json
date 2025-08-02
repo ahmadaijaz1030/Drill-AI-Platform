@@ -1,0 +1,33 @@
+{
+  "name": "oil-drilling-ai-platform",
+  "version": "1.0.0",
+  "description": "AI-powered oil drilling data management platform",
+  "main": "server/index.js",
+  "scripts": {
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "server": "nodemon server/index.js",
+    "client": "cd client && npm start",
+    "build": "cd client && npm run build",
+    "install-all": "npm install && cd client && npm install",
+    "start": "node server/index.js"
+  },
+  "keywords": ["oil", "drilling", "ai", "dashboard", "react", "nodejs"],
+  "author": "Oil Drilling AI Team",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "multer": "^1.4.5-lts.1",
+    "xlsx": "^0.18.5",
+    "aws-sdk": "^2.1450.0",
+    "dotenv": "^16.3.1",
+    "openai": "^4.20.1",
+    "uuid": "^9.0.0",
+    "helmet": "^7.0.0",
+    "compression": "^1.7.4"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1",
+    "concurrently": "^8.2.0"
+  }
+} 
