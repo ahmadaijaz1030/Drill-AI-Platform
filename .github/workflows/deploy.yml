@@ -1,4 +1,4 @@
-name: Deploy to AWS
+name: Deploy Drill AI Platform
 
 on:
   push:
@@ -6,75 +6,191 @@ on:
   pull_request:
     branches: [ main ]
 
+env:
+  NODE_VERSION: '18'
+  AWS_REGION: us-east-1
+
 jobs:
   test:
     runs-on: ubuntu-latest
     
-    steps:
-    - uses: actions/checkout@v3
+    strategy:
+      matrix:
+        node-version: [16, 18, 20]
     
-    - name: Setup Node.js
-      uses: actions/setup-node@v3
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
       with:
-        node-version: '16'
+        node-version: ${{ matrix.node-version }}
         cache: 'npm'
-        
+    
     - name: Install dependencies
-      run: npm run install-all
-      
+      run: |
+        npm ci
+        cd client && npm ci
+        cd ../server && npm ci
+    
+    - name: Run linting
+      run: |
+        npm run lint
+        cd client && npm run lint
+        cd ../server && npm run lint
+    
     - name: Run tests
-      run: npm test
-      
+      run: |
+        npm test
+        cd client && npm test
+        cd ../server && npm test
+    
     - name: Build application
-      run: npm run build
+      run: |
+        cd client && npm run build
+        cd ../server && npm run build
 
-  deploy:
-    needs: test
+  security-scan:
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    needs: test
     
     steps:
-    - uses: actions/checkout@v3
+    - name: Checkout code
+      uses: actions/checkout@v4
     
-    - name: Setup Node.js
-      uses: actions/setup-node@v3
+    - name: Run security scan
+      uses: github/codeql-action/init@v3
       with:
-        node-version: '16'
-        cache: 'npm'
-        
-    - name: Install dependencies
-      run: npm run install-all
-      
-    - name: Build application
-      run: npm run build
-      
+        languages: javascript
+    
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v3
+    
+    - name: Run npm audit
+      run: |
+        npm audit --audit-level moderate
+        cd client && npm audit --audit-level moderate
+        cd ../server && npm audit --audit-level moderate
+
+  docker-build:
+    runs-on: ubuntu-latest
+    needs: [test, security-scan]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    
+    - name: Login to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+    
+    - name: Build and push Docker images
+      run: |
+        docker build -t drill-ai-frontend:latest ./client
+        docker build -t drill-ai-backend:latest ./server
+        docker tag drill-ai-frontend:latest ${{ secrets.DOCKER_USERNAME }}/drill-ai-frontend:latest
+        docker tag drill-ai-backend:latest ${{ secrets.DOCKER_USERNAME }}/drill-ai-backend:latest
+        docker push ${{ secrets.DOCKER_USERNAME }}/drill-ai-frontend:latest
+        docker push ${{ secrets.DOCKER_USERNAME }}/drill-ai-backend:latest
+
+  deploy-staging:
+    runs-on: ubuntu-latest
+    needs: docker-build
+    if: github.ref == 'refs/heads/develop'
+    environment: staging
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
     - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v2
+      uses: aws-actions/configure-aws-credentials@v4
       with:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ secrets.AWS_REGION }}
-        
-    - name: Login to Amazon ECR
-      id: login-ecr
-      uses: aws-actions/amazon-ecr-login@v1
-      
-    - name: Build, tag, and push image to Amazon ECR
-      env:
-        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-        ECR_REPOSITORY: oil-drilling-app
-        IMAGE_TAG: ${{ github.sha }}
+        aws-region: ${{ env.AWS_REGION }}
+    
+    - name: Deploy to AWS Elastic Beanstalk (Staging)
       run: |
-        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
-        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+        # Deploy backend
+        aws elasticbeanstalk create-application-version \
+          --application-name drill-ai-backend-staging \
+          --version-label drill-ai-backend-${{ github.sha }} \
+          --source-bundle S3Bucket=${{ secrets.AWS_S3_BUCKET }},S3Key=drill-ai-backend-${{ github.sha }}.zip
         
-    - name: Deploy to Elastic Beanstalk
-      run: |
         aws elasticbeanstalk update-environment \
-          --environment-name ${{ secrets.EB_ENVIRONMENT_NAME }} \
-          --version-label ${{ github.sha }}
-          
-    - name: Deploy to S3 (Static Hosting)
+          --environment-name drill-ai-backend-staging-env \
+          --version-label drill-ai-backend-${{ github.sha }}
+        
+        # Deploy frontend
+        aws s3 sync ./client/build s3://${{ secrets.AWS_S3_FRONTEND_BUCKET }} --delete
+        
+        aws cloudfront create-invalidation \
+          --distribution-id ${{ secrets.AWS_CLOUDFRONT_DISTRIBUTION_ID }} \
+          --paths "/*"
+
+  deploy-production:
+    runs-on: ubuntu-latest
+    needs: docker-build
+    if: github.ref == 'refs/heads/main'
+    environment: production
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+    
+    - name: Deploy to AWS Elastic Beanstalk (Production)
       run: |
-        aws s3 sync client/build s3://${{ secrets.S3_BUCKET_NAME }} --delete
-        aws cloudfront create-invalidation --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} --paths "/*" 
+        # Deploy backend
+        aws elasticbeanstalk create-application-version \
+          --application-name drill-ai-backend-production \
+          --version-label drill-ai-backend-${{ github.sha }} \
+          --source-bundle S3Bucket=${{ secrets.AWS_S3_BUCKET }},S3Key=drill-ai-backend-${{ github.sha }}.zip
+        
+        aws elasticbeanstalk update-environment \
+          --environment-name drill-ai-backend-production-env \
+          --version-label drill-ai-backend-${{ github.sha }}
+        
+        # Deploy frontend
+        aws s3 sync ./client/build s3://${{ secrets.AWS_S3_FRONTEND_BUCKET }} --delete
+        
+        aws cloudfront create-invalidation \
+          --distribution-id ${{ secrets.AWS_CLOUDFRONT_DISTRIBUTION_ID }} \
+          --paths "/*"
+    
+    - name: Notify deployment
+      run: |
+        echo "Production deployment completed successfully!"
+        echo "Frontend: https://drill-ai-frontend.yourdomain.com"
+        echo "Backend: https://drill-ai-backend.yourdomain.com"
+
+  notify:
+    runs-on: ubuntu-latest
+    needs: [deploy-staging, deploy-production]
+    if: always()
+    
+    steps:
+    - name: Notify on success
+      if: success()
+      run: |
+        echo "✅ Deployment completed successfully!"
+        echo "🚀 Application is now live"
+    
+    - name: Notify on failure
+      if: failure()
+      run: |
+        echo "❌ Deployment failed!"
+        echo "Please check the logs for more details" 
