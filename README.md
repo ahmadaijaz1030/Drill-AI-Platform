@@ -1,5 +1,8 @@
 **Author: Ahmad Aijaz**
 
+# Demo Video
+https://drive.google.com/file/d/1coTsLVLKM0y04akVHQChcce6oFn1Ca7Q/view?usp=drive_link
+
 # Drill AI Intelligence Platform
 
 A comprehensive AI-powered oil drilling data management platform built with React, Node.js, and AWS services. This platform addresses the critical challenges faced by the oil and gas industry in managing and analyzing drilling data efficiently.
