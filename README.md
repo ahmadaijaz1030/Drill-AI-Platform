@@ -256,77 +256,6 @@ const chatResponse = await fetch('/api/chat', {
 });
 ```
 
-## 🎥 Demo Video
-
-**5-Minute Codebase Walkthrough & Demo**
-
-The demo video showcases:
-- **Codebase Architecture**: Walkthrough of React components and Node.js backend
-- **Frontend Design**: Modern UI/UX with responsive design
-- **User Interaction**: File upload, data visualization, and AI chatbot
-- **Backend Integration**: API endpoints and cloud service integration
-- **Real-time Features**: Live data updates and AI responses
-
-**Video Link**: [Demo Video URL - To be added]
-
-**Key Demo Sections**:
-1. **Project Structure** (30 seconds)
-   - React frontend components
-   - Node.js backend architecture
-   - AWS cloud integration
-
-2. **User Interface** (1 minute)
-   - Dashboard layout and navigation
-   - Well list and data visualization
-   - File upload interface
-   - AI chatbot interaction
-
-3. **Data Processing** (1 minute)
-   - Excel/CSV file upload
-   - Data validation and processing
-   - Real-time chart updates
-   - Comprehensive data tables
-
-4. **AI Integration** (1 minute)
-   - Chatbot functionality
-   - Voice interaction
-   - Context-aware responses
-   - File attachment support
-
-5. **Mobile Responsiveness** (30 seconds)
-   - Adaptive layouts
-   - Touch-friendly interface
-   - Cross-device compatibility
-
-## 🔧 Maintenance & Monitoring
-
-### Application Maintenance
-- **Regular Updates**: Monthly dependency updates and security patches
-- **Code Reviews**: Automated code quality checks and manual reviews
-- **Testing**: Unit, integration, and end-to-end testing
-
-### Database Maintenance
-- **Backup Strategy**: Daily automated backups with 30-day retention
-- **Performance Monitoring**: Query optimization and index management
-- **Data Archival**: Automated archival of old data
-
-### Security Maintenance
-- **Vulnerability Scanning**: Regular security assessments
-- **Access Control**: Role-based access management
-- **Audit Logging**: Comprehensive activity logging
-
-### Performance Monitoring
-- **AWS CloudWatch**: Real-time application metrics
-- **Error Tracking**: Comprehensive error logging and alerting
-- **Performance Metrics**: Response time, throughput, and availability
-
-### Alerting Strategy
-- **Critical Alerts**: Immediate notification for system failures
-- **Warning Alerts**: Proactive alerts for potential issues
-- **Informational Alerts**: Regular status updates and reports
-
-## 🤝 Contributing
-
 ### Development Setup
 1. Fork the repository
 2. Create a feature branch: `git checkout -b feature/amazing-feature`
@@ -340,30 +269,6 @@ The demo video showcases:
 - Write comprehensive tests
 - Update documentation for new features
 
-### Testing
-```bash
-# Run all tests
-npm test
-
-# Run frontend tests
-cd client && npm test
-
-# Run backend tests
-cd server && npm test
-```
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- **OpenAI** for AI chatbot capabilities
-- **AWS** for cloud infrastructure services
-- **React Team** for the excellent frontend framework
-- **Node.js Community** for the robust backend ecosystem
-
----
 
 **For detailed architecture, deployment strategies, and technical specifications, please refer to the [DESIGN_DOC.md](./DESIGN_DOC.md) file.**
 
