@@ -129,4 +129,4 @@ See `.github/workflows/deploy.yml` for deployment configuration.
 - File type checking (Excel/CSV only)
 - 10MB file size limit
 - CORS configuration
-- Comprehensive error handling 
+- Comprehensive error handling
